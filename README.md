@@ -1,26 +1,28 @@
-# Gemma by Google
+# Gemma in PyTorch
+
+**Gemma** is a family of lightweight, state-of-the art open models built from research and technology used to create Google Gemini models. They are text-to-text, decoder-only large language models, available in English, with open weights, pre-trained variants, and instruction-tuned variants.
+
+This is the official PyTorch implementation of Gemma models. We provide model and inference implementations using both PyTorch and PyTorch/XLA, and support running it on CPU, GPU and TPU.
 
 ## Download Gemma model checkpoint
 
 You can find the model checkpoints on Kaggle
 [here](https://www.kaggle.com/models/google/gemma/frameworks/pyTorch).
 
-Note that you can choose between the 2b and 7b variants.
+Note that you can choose between the 2B, 7B, 7B int8 quantized variants.
 
 ```
-VARIANT=<2b or 7b>
+VARIANT=<2B or 7B>
+QUANT=<true or false>
 CKPT_PATH=<Insert ckpt path here>
 ```
 
-## Try it on Colab
+## Try it free on Colab
 
 Follow the steps at
 [https://ai.google.dev/gemma/docs/pytorch_demo](https://ai.google.dev/gemma/docs/pytorch_demo,).
 
-## Try It Out with Torch (Supports CPU, GPU)
-
-Note: if you are using a quantized checkpoint, add `--quant=True` to the end of
-your `docker run` command.
+## Try it out with PyTorch
 
 ### Build the docker image.
 
@@ -30,7 +32,7 @@ DOCKER_URI=gemma:${USER}
 docker build -f docker/Dockerfile ./ -t ${DOCKER_URI}
 ```
 
-### Run Gemma Sample Script on CPU.
+### Run Gemma inference on CPU.
 
 ```bash
 PROMPT="The meaning of life is"
@@ -41,10 +43,11 @@ docker run -t --rm \
     python scripts/run.py \
     --ckpt=/tmp/ckpt \
     --variant="${VARIANT}" \
+    --quant="${QUANT?}" \
     --prompt="${PROMPT}"
 ```
 
-### Run Gemma Sample Script on GPU.
+### Run Gemma inference on GPU.
 
 ```bash
 PROMPT="The meaning of life is"
@@ -57,13 +60,11 @@ docker run -t --rm \
     --device=cuda \
     --ckpt=/tmp/ckpt \
     --variant="${VARIANT}" \
+    --quant="${QUANT?}" \
     --prompt="${PROMPT}"
 ```
 
-## Try It Out with Torch XLA (Supports CPU, GPU, TPU)
-
-Note: if you are using a quantized checkpoint, add `--quant=True` to the end of
-your `docker run` command.
+## Try It out with PyTorch/XLA
 
 ### Build the docker image (CPU, TPU).
 
@@ -81,7 +82,7 @@ DOCKER_URI=gemma_xla_gpu:${USER}
 docker build -f docker/xla_gpu.Dockerfile ./ -t ${DOCKER_URI}
 ```
 
-### Run Gemma Sample Script on CPU.
+### Run Gemma inference on CPU.
 
 ```
 docker run -t --rm \
@@ -91,10 +92,11 @@ docker run -t --rm \
     ${DOCKER_URI} \
     python scripts/run_xla.py \
     --ckpt=/tmp/ckpt \
-    --variant="${VARIANT}"
+    --variant="${VARIANT}" \
+    --quant="${QUANT?}"
 ```
 
-### Run Gemma Sample Script on TPU.
+### Run Gemma inference on TPU.
 
 Note: be sure to use the docker container built from `xla.Dockerfile`.
 
@@ -106,10 +108,11 @@ docker run -t --rm \
     ${DOCKER_URI} \
     python scripts/run_xla.py \
     --ckpt=/tmp/ckpt \
-    --variant="${VARIANT}"
+    --variant="${VARIANT}" \
+    --quant="${QUANT?}"
 ```
 
-### Run Gemma Sample Script on GPU.
+### Run Gemma inference on GPU.
 
 Note: be sure to use the docker container built from `xla_gpu.Dockerfile`.
 
@@ -122,5 +125,6 @@ docker run -t --rm --privileged \
     ${DOCKER_URI} \
     python scripts/run_xla.py \
     --ckpt=/tmp/ckpt \
-    --variant="${VARIANT}"
+    --variant="${VARIANT}" \
+    --quant="${QUANT?}"
 ```
