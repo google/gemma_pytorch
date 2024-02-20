@@ -28,6 +28,13 @@ Follow the steps at
 
 ## Try it out with PyTorch
 
+Prerequisite: make sure you have setup docker permission properly as a non-root user.
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
 ### Build the docker image.
 
 ```bash
