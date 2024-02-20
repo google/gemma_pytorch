@@ -2,10 +2,11 @@
 
 **Gemma** is a family of lightweight, state-of-the art open models built from research and technology used to create Google Gemini models. They are text-to-text, decoder-only large language models, available in English, with open weights, pre-trained variants, and instruction-tuned variants. For more details, please check out the following links:
 
- * [Gemma introduction in Google AI](https://ai.google.dev/gemma)
- * [Gemma model card in Vertex AI Model Garden](https://console.cloud.google.com/vertex-ai/publishers/google/model-garden/335)
+ * [Gemma on Google AI](https://ai.google.dev/gemma)
+ * [Gemma on Kaggle](https://www.kaggle.com/google/gemma)
+ * [Gemma on Vertex AI Model Garden](https://console.cloud.google.com/vertex-ai/publishers/google/model-garden/335)
 
-This is the official PyTorch implementation of Gemma models. We provide model and inference implementations using both PyTorch and PyTorch/XLA, and support running it on CPU, GPU and TPU. 
+This is the official PyTorch implementation of Gemma models. We provide model and inference implementations using both PyTorch and PyTorch/XLA, and support running inference on CPU, GPU and TPU. 
 
 ## Download Gemma model checkpoint
 
@@ -23,7 +24,7 @@ CKPT_PATH=<Insert ckpt path here>
 ## Try it free on Colab
 
 Follow the steps at
-[https://ai.google.dev/gemma/docs/pytorch_demo](https://ai.google.dev/gemma/docs/pytorch_demo,).
+[https://ai.google.dev/gemma/docs/pytorch_demo](https://ai.google.dev/gemma/docs/pytorch_demo).
 
 ## Try it out with PyTorch
 
