@@ -1,8 +1,11 @@
 # Gemma in PyTorch
 
-**Gemma** is a family of lightweight, state-of-the art open models built from research and technology used to create Google Gemini models. They are text-to-text, decoder-only large language models, available in English, with open weights, pre-trained variants, and instruction-tuned variants.
+**Gemma** is a family of lightweight, state-of-the art open models built from research and technology used to create Google Gemini models. They are text-to-text, decoder-only large language models, available in English, with open weights, pre-trained variants, and instruction-tuned variants. For more details, please check out the following links:
 
-This is the official PyTorch implementation of Gemma models. We provide model and inference implementations using both PyTorch and PyTorch/XLA, and support running it on CPU, GPU and TPU.
+ * [Gemma introduction in Google AI](https://ai.google.dev/gemma)
+ * [Gemma model card in Vertex AI Model Garden](https://console.cloud.google.com/vertex-ai/publishers/google/model-garden/335)
+
+This is the official PyTorch implementation of Gemma models. We provide model and inference implementations using both PyTorch and PyTorch/XLA, and support running it on CPU, GPU and TPU. 
 
 ## Download Gemma model checkpoint
 
