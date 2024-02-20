@@ -132,3 +132,7 @@ docker run -t --rm --privileged \
     --variant="${VARIANT}" \
     --quant="${QUANT?}"
 ```
+
+## Disclaimer
+
+This is not an officially supported Google product.
