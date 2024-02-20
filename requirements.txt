@@ -1,0 +1,4 @@
+fairscale == 0.4.13
+numpy == 1.24.4
+immutabledict == 4.1.0
+sentencepiece == 0.1.99
