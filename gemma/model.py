@@ -559,6 +559,8 @@ class GemmaForCausalLM(nn.Module):
 
     def load_weights(self, model_path: str):
         self.load_state_dict(
-            torch.load(model_path, mmap=True)['model_state_dict'],
+            torch.load(
+                model_path, mmap=True, weights_only=True,
+            )['model_state_dict'],
             strict=False,
         )

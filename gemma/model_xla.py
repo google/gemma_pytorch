@@ -514,7 +514,7 @@ class GemmaForCausalLM(nn.Module):
         return next_tokens
 
     def load_weights(self, model_path: str):
-        checkpoint = torch.load(model_path)
+        checkpoint = torch.load(model_path, weights_only=True)
         model_state_dict = checkpoint['model_state_dict']
 
         num_attn_heads = self.config.num_attention_heads
