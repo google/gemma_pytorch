@@ -21,6 +21,8 @@ import torch
 from gemma import config
 from gemma import model as gemma_model
 
+import utils
+
 
 @contextlib.contextmanager
 def _set_default_tensor_type(dtype: torch.dtype):
@@ -72,7 +74,7 @@ if __name__ == "__main__":
                         choices=["cpu", "cuda"])
     parser.add_argument("--output_len", type=int, default=4)
     parser.add_argument("--seed", type=int, default=12345)
-    parser.add_argument("--quant", type=bool, default=False)
+    parser.add_argument("--quant", type=utils.strtobool, default=False)
     parser.add_argument("--prompt", type=str, default="The meaning of life is")
     args = parser.parse_args()
 
