@@ -54,7 +54,7 @@ docker run -t --rm \
     --ckpt=/tmp/ckpt \
     --variant="${VARIANT}" \
     --prompt="${PROMPT}"
-    # add `--quant` for the 7B int8 quantized model.
+    # add `--quant` for the int8 quantized model.
 ```
 
 ### Run Gemma inference on GPU.
