@@ -17,7 +17,6 @@ Note that you can choose between the 2B, 7B, 7B int8 quantized variants.
 
 ```
 VARIANT=<2B or 7B>
-QUANT=<true or false>
 CKPT_PATH=<Insert ckpt path here>
 ```
 
@@ -54,8 +53,8 @@ docker run -t --rm \
     python scripts/run.py \
     --ckpt=/tmp/ckpt \
     --variant="${VARIANT}" \
-    --quant="${QUANT?}" \
     --prompt="${PROMPT}"
+    # add `--quant` for the 7B int8 quantized model.
 ```
 
 ### Run Gemma inference on GPU.
@@ -71,8 +70,8 @@ docker run -t --rm \
     --device=cuda \
     --ckpt=/tmp/ckpt \
     --variant="${VARIANT}" \
-    --quant="${QUANT?}" \
     --prompt="${PROMPT}"
+    # add `--quant` for the int8 quantized model.
 ```
 
 ## Try It out with PyTorch/XLA
@@ -95,7 +94,7 @@ docker build -f docker/xla_gpu.Dockerfile ./ -t ${DOCKER_URI}
 
 ### Run Gemma inference on CPU.
 
-```
+```bash
 docker run -t --rm \
     --shm-size 4gb \
     -e PJRT_DEVICE=CPU \
@@ -104,14 +103,14 @@ docker run -t --rm \
     python scripts/run_xla.py \
     --ckpt=/tmp/ckpt \
     --variant="${VARIANT}" \
-    --quant="${QUANT?}"
+    # add `--quant` for the int8 quantized model.
 ```
 
 ### Run Gemma inference on TPU.
 
 Note: be sure to use the docker container built from `xla.Dockerfile`.
 
-```
+```bash
 docker run -t --rm \
     --shm-size 4gb \
     -e PJRT_DEVICE=TPU \
@@ -120,14 +119,14 @@ docker run -t --rm \
     python scripts/run_xla.py \
     --ckpt=/tmp/ckpt \
     --variant="${VARIANT}" \
-    --quant="${QUANT?}"
+    # add `--quant` for the int8 quantized model.
 ```
 
 ### Run Gemma inference on GPU.
 
 Note: be sure to use the docker container built from `xla_gpu.Dockerfile`.
 
-```
+```bash
 docker run -t --rm --privileged \
     --shm-size=16g --net=host --gpus all \
     -e USE_CUDA=1 \
@@ -137,7 +136,7 @@ docker run -t --rm --privileged \
     python scripts/run_xla.py \
     --ckpt=/tmp/ckpt \
     --variant="${VARIANT}" \
-    --quant="${QUANT?}"
+    # add `--quant` for the int8 quantized model.
 ```
 
 ## Disclaimer
