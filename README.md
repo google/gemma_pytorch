@@ -16,7 +16,7 @@ You can find the model checkpoints on Kaggle
 Note that you can choose between the 2B, 7B, 7B int8 quantized variants.
 
 ```
-VARIANT=<2B or 7B>
+VARIANT=<2b or 7b>
 CKPT_PATH=<Insert ckpt path here>
 ```
 
