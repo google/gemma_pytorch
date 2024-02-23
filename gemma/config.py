@@ -1,26 +1,10 @@
-# Copyright 2024 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-"""Gemma model config."""
-
+from pathlib import Path
 import dataclasses
 import immutabledict
 import torch
-from typing import Optional
+from typing import Optional, Union
 
 
-# Keep a mapping from dtype strings to the supported torch dtypes.
 _STR_DTYPE_TO_TORCH_DTYPE = immutabledict.immutabledict({
     'float16': torch.float16,
     'float': torch.float32,
@@ -31,33 +15,20 @@ _STR_DTYPE_TO_TORCH_DTYPE = immutabledict.immutabledict({
 
 @dataclasses.dataclass
 class GemmaConfig:
-    # The number of tokens in the vocabulary.
     vocab_size: int = 256000
-    # The maximum sequence length that this model might ever be used with.
     max_position_embeddings: int = 8192
-    # The number of blocks in the model.
     num_hidden_layers: int = 28
-    # The number of attention heads used in the attention layers of the model.
     num_attention_heads: int = 16
-    # The number of key-value heads for implementing attention.
     num_key_value_heads: int = 16
-    # The hidden size of the model.
     hidden_size: int = 3072
-    # The dimension of the MLP representations.
     intermediate_size: int = 24576
-    # The number of head dimensions.
     head_dim: int = 256
-    # The epsilon used by the rms normalization layers.
     rms_norm_eps: float = 1e-6
-    # The dtype of the weights.
     dtype: str = 'bfloat16'
-    # Whether a quantized version of the model is used.
     quant: bool = False
-    # The path to the model tokenizer.
-    tokenizer: Optional[str] = 'tokenizer/tokenizer.model'
+    tokenizer: Optional[Union[str, Path]] = Path('tokenizer/tokenizer.model')
 
     def get_dtype(self) -> Optional[torch.dtype]:
-        """Gets the torch dtype from the config dtype string."""
         return _STR_DTYPE_TO_TORCH_DTYPE.get(self.dtype, None)
 
 
@@ -75,10 +46,36 @@ def get_config_for_2b() -> GemmaConfig:
     )
 
 
+class InvalidVariantError(ValueError):
+    pass
+
+
 def get_model_config(variant: str) -> GemmaConfig:
     if variant == '7b':
         return get_config_for_7b()
     elif variant == '2b':
         return get_config_for_2b()
-    return ValueError(f'Invalid variant {variant}. Supported variants are "2b"'
-                      'and "7b"')
+    else:
+        raise InvalidVariantError(f'Invalid variant {variant}. '
+                                  f'Supported variants are "2b" and "7b"')
+
+
+# Unit tests
+def test_gemma_config():
+    config = GemmaConfig()
+    assert isinstance(config.tokenizer, (str, Path))
+
+    config_7b = get_config_for_7b()
+    assert config_7b.num_hidden_layers == 28
+
+    config_2b = get_config_for_2b()
+    assert config_2b.num_hidden_layers == 18
+
+    try:
+        get_model_config('3b')
+    except InvalidVariantError as e:
+        assert str(e) == 'Invalid variant 3b. Supported variants are "2b" and "7b"'
+
+
+if __name__ == "__main__":
+    test_gemma_config()
