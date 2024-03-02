@@ -82,3 +82,8 @@ def get_model_config(variant: str) -> GemmaConfig:
         return get_config_for_2b()
     return ValueError(f'Invalid variant {variant}. Supported variants are "2b"'
                       'and "7b"')
+
+
+def gelu_approx(x):
+    """The approximate gelu to match JAX & Keras implementations."""
+    return 0.5 * x * (1 + torch.tanh(torch.sqrt(2 / torch.pi) * (x + 0.044715 * torch.pow(x, 3))))
