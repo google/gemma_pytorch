@@ -50,7 +50,7 @@ def main(args):
     print("Model loading done")
 
     # Generate the response.
-    result = model.generate(args.prompt, device)
+    result = model.generate(args.prompt, device, output_len=args.output_len)
 
     # Print the prompts and results.
     print('======================================')
@@ -70,7 +70,7 @@ if __name__ == "__main__":
                         type=str,
                         default="cpu",
                         choices=["cpu", "cuda"])
-    parser.add_argument("--output_len", type=int, default=4)
+    parser.add_argument("--output_len", type=int, default=100)
     parser.add_argument("--seed", type=int, default=12345)
     parser.add_argument("--quant", action='store_true')
     parser.add_argument("--prompt", type=str, default="The meaning of life is")
