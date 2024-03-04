@@ -194,7 +194,7 @@ class GemmaMLP(nn.Module):
 
     def forward(self, x):
         gate = self.gate_proj(x)
-        gate = F.gelu(gate)
+        gate = F.gelu(gate, approximate="tanh")
         up = self.up_proj(x)
         fuse = gate * up
         outputs = self.down_proj(fuse)
