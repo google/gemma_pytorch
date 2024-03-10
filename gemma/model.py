@@ -35,7 +35,7 @@ class Sampler(nn.Module):
         embedding: torch.Tensor,
         hidden_states: torch.Tensor,
         output_positions: torch.Tensor,
-        temperatures: torch.Tensor,
+        temperatures: Union[torch.Tensor, None],
         top_ps: torch.Tensor,
         top_ks: torch.Tensor,
         embedding_bias: Optional[torch.Tensor] = None,
@@ -418,7 +418,7 @@ class GemmaForCausalLM(nn.Module):
         kv_caches: List[Tuple[torch.Tensor, torch.Tensor]],
         mask: torch.Tensor,
         output_positions: torch.Tensor,
-        temperatures: torch.Tensor,
+        temperatures: Union[torch.Tensor, None],
         top_ps: torch.Tensor,
         top_ks: torch.Tensor,
         **kwargs,
@@ -457,7 +457,7 @@ class GemmaForCausalLM(nn.Module):
         prompts: Union[str, Sequence[str]],
         device: Any,
         output_len: int = 100,
-        temperature: float = 0.95,
+        temperature: Union[float, None] = 0.95,
         top_p: float = 1.0,
         top_k: int = 100,
     ) -> Union[str, Sequence[str]]:
@@ -505,8 +505,8 @@ class GemmaForCausalLM(nn.Module):
         curr_mask_tensor = mask_tensor.index_select(2, input_positions_tensor)
         output_positions_tensor = torch.LongTensor([min_prompt_len - 1]).to(
             device)
-        temperatures_tensor = torch.FloatTensor([temperature] * batch_size).to(
-            device)
+        temperatures_tensor = None if not temperature else torch.FloatTensor(
+            [temperature] * batch_size).to(device)
         top_ps_tensor = torch.FloatTensor([top_p] * batch_size).to(device)
         top_ks_tensor = torch.LongTensor([top_k] * batch_size).to(device)
         output_index = torch.tensor(min_prompt_len, dtype=torch.int64).to(
