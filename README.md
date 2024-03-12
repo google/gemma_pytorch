@@ -146,6 +146,18 @@ docker run -t --rm --privileged \
     # add `--quant` for the int8 quantized model.
 ```
 
+### Tokenizer Notes
+
+99 unused tokens are reserved in the pretrained tokenizer model to assist with more efficient training/fine-tuning. Unused tokens are in the string format of `<unused[0-98]>` with token id range of `[7-105]`. 
+
+```
+"<unused0>": 7,
+"<unused1>": 8,
+"<unused2>": 9,
+...
+"<unused98>": 105,
+```
+
 ## Disclaimer
 
 This is not an officially supported Google product.
