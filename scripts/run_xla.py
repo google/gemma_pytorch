@@ -17,7 +17,7 @@ import os
 import random
 import socket
 import sys
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import torch
@@ -49,10 +49,17 @@ def _set_default_tensor_type(dtype: torch.dtype):
     torch.set_default_dtype(torch.float)
 
 
-def generate(i: int, model_config: GemmaConfig, ckpt_path: str,
-             prompts: List[str], output_lens: List[int],
-             temperatures: List[float], top_ps: List[float],
-             top_ks: List[int], seed: int):
+def generate(
+    i: int,
+    model_config: GemmaConfig,
+    ckpt_path: str,
+    prompts: List[str],
+    output_lens: List[int],
+    temperatures: Union[List[float], None],
+    top_ps: List[float],
+    top_ks: List[int],
+    seed: int
+):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -90,7 +97,8 @@ def generate(i: int, model_config: GemmaConfig, ckpt_path: str,
     min_prompt_len = min(len(p) for p in prompt_tokens)
 
     batch_size = len(prompts)
-    assert batch_size == len(temperatures)
+    if temperatures is not None:
+        assert batch_size == len(temperatures)
     assert batch_size == len(top_ps)
     assert batch_size == len(top_ks)
     max_seq_len = max([len(p) + o for p, o in zip(prompt_tokens, output_lens)])
@@ -140,7 +148,7 @@ def generate(i: int, model_config: GemmaConfig, ckpt_path: str,
     mask_tensor = torch.triu(mask_tensor, diagonal=1).to(device)
     curr_mask_tensor = mask_tensor.index_select(2, input_positions_tensor)
     output_positions_tensor = torch.LongTensor([min_prompt_len - 1]).to(device)
-    temperatures_tensor = torch.FloatTensor(temperatures).to(device)
+    temperatures_tensor = None if not temperatures else torch.FloatTensor(temperatures).to(device)
     top_ps_tensor = torch.FloatTensor(top_ps).to(device)
     top_ks_tensor = torch.LongTensor(top_ks).to(device)
     output_index = torch.tensor(min_prompt_len, dtype=torch.int64).to(device)
