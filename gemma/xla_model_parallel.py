@@ -17,7 +17,6 @@ from dataclasses import dataclass
 import os
 from typing import Callable, List, Optional, Tuple
 
-# from fairscale.nn.model_parallel.utils import divide_and_check_no_remainder, split_tensor_along_last_dim
 import torch
 import torch.ao.quantization.fx._decomposed
 import torch.distributed as dist
