@@ -31,9 +31,7 @@ RUN python3 -m pip install --upgrade pip
 RUN pip uninstall -y torch
 RUN pip install torch==2.1.1
 RUN pip install https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.8/torch_xla-2.2.0rc1-cp38-cp38-linux_x86_64.whl
-RUN pip install fairscale==0.4.13
 RUN pip install numpy==1.24.4
-RUN pip install immutabledict==4.1.0
 RUN pip install sentencepiece==0.1.99
 
 # Install from source.
