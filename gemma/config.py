@@ -15,13 +15,12 @@
 """Gemma model config."""
 
 import dataclasses
-import immutabledict
 import torch
 from typing import Optional
 
 
 # Keep a mapping from dtype strings to the supported torch dtypes.
-_STR_DTYPE_TO_TORCH_DTYPE = immutabledict.immutabledict({
+_STR_DTYPE_TO_TORCH_DTYPE = dict({
     'float16': torch.float16,
     'float': torch.float32,
     'float32': torch.float32,
@@ -81,4 +80,4 @@ def get_model_config(variant: str) -> GemmaConfig:
     elif variant == '2b':
         return get_config_for_2b()
     return ValueError(f'Invalid variant {variant}. Supported variants are "2b"'
-                      'and "7b"')
+                        'and "7b"')
