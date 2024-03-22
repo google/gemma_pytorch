@@ -15,9 +15,9 @@
 """Gemma model config."""
 
 import dataclasses
-import torch
 from typing import Optional
 
+import torch
 
 # Keep a mapping from dtype strings to the supported torch dtypes.
 _STR_DTYPE_TO_TORCH_DTYPE = dict({
@@ -79,5 +79,5 @@ def get_model_config(variant: str) -> GemmaConfig:
         return get_config_for_7b()
     elif variant == '2b':
         return get_config_for_2b()
-    return ValueError(f'Invalid variant {variant}. Supported variants are "2b"'
-                        'and "7b"')
+    raise ValueError(f'Invalid variant {variant}. Supported variants are "2b"'
+                     'and "7b"')
