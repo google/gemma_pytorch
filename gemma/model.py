@@ -558,9 +558,13 @@ class GemmaForCausalLM(nn.Module):
         return results[0] if is_str_prompt else results
 
     def load_weights(self, model_path: str):
-        self.load_state_dict(
-            torch.load(
-                model_path, mmap=True, weights_only=True,
-            )['model_state_dict'],
-            strict=False,
-        )
+        if self.config.quant:
+            self.load_state_dict(
+                torch.load(model_path, mmap=True, weights_only=True)['model_state_dict'],
+                strict=False
+            )
+        else:
+            self.load_state_dict(
+                torch.load(model_path, weights_only=True)['model_state_dict'],
+                strict=False, assign=True
+            )
