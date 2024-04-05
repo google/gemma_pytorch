@@ -8,6 +8,10 @@
 
 This is the official PyTorch implementation of Gemma models. We provide model and inference implementations using both PyTorch and PyTorch/XLA, and support running inference on CPU, GPU and TPU. 
 
+## Updates
+
+[April 5] Support Gemma v1.1. You can find the v1.1 checkpoints [here](https://www.kaggle.com/models/google/gemmav1-1?rvi=1).
+
 ## Download Gemma model checkpoint
 
 You can find the model checkpoints on Kaggle
