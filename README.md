@@ -10,7 +10,7 @@ This is the official PyTorch implementation of Gemma models. We provide model an
 
 ## Updates
 
-[April 5] Support Gemma v1.1. You can find the v1.1 checkpoints [here](https://www.kaggle.com/models/google/gemmav1-1?rvi=1).
+[April 5] Support Gemma v1.1. You can find the v1.1 checkpoints [here](https://www.kaggle.com/models/google/gemma/frameworks/pyTorch).
 
 ## Download Gemma model checkpoint
 
