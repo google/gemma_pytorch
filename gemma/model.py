@@ -551,7 +551,7 @@ class GemmaForCausalLM(nn.Module):
             for eos_idx in batch_eos_idx:
                 if output_index >= prompt_length[eos_idx]:
                     eos_flags_tensor[eos_idx] = True
-                
+
             if eos_flags_tensor.all():
                 break
 
