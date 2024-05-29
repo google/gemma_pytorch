@@ -399,7 +399,7 @@ class ParallelEmbedding(torch.nn.Module):
         self.embedding_dim = embedding_dim
         self.padding_idx = padding_idx
         self.max_norm = max_norm
-        self.norm_type = scale_grad_by_freq
+        self.norm_type = norm_type
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
         self._weight = None
