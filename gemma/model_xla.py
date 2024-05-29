@@ -488,7 +488,7 @@ class GemmaForCausalLM(nn.Module):
         top_ps: torch.Tensor,
         top_ks: torch.Tensor,
         **kwargs,
-    ) -> torch.Tensor:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         freqs_cis = self.freqs_cis.index_select(0, input_positions)
         kv_write_indices = input_positions
 
@@ -508,7 +508,7 @@ class GemmaForCausalLM(nn.Module):
         if self.config.quant:
             embedder_weight = (
                 embedder_weight * self.embedder.weight_scaler.unsqueeze(-1))
-        next_tokens, _ = self.sampler(
+        next_tokens, logits = self.sampler(
             embedding=embedder_weight,
             hidden_states=hidden_states,
             output_positions=output_positions,
@@ -516,7 +516,7 @@ class GemmaForCausalLM(nn.Module):
             top_ps=top_ps,
             top_ks=top_ks,
         )
-        return next_tokens
+        return next_tokens, logits
 
     def load_weights(self, model_path: str):
         checkpoint = torch.load(model_path, weights_only=True)
