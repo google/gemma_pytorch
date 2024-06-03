@@ -79,5 +79,5 @@ def get_model_config(variant: str) -> GemmaConfig:
         return get_config_for_7b()
     elif variant == '2b':
         return get_config_for_2b()
-    return ValueError(f'Invalid variant {variant}. Supported variants are "2b"'
+    raise ValueError(f'Invalid variant {variant}. Supported variants are "2b"'
                         'and "7b"')
