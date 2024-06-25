@@ -157,7 +157,7 @@ def generate(
 
     # Prefill up to min_prompt_len tokens, then treat other prefill as decode and ignore output.
     for i in range(max_seq_len - min_prompt_len):
-        next_token_ids = model(
+        next_token_ids, _ = model(
             input_token_ids=input_token_ids_tensor,
             input_positions=input_positions_tensor,
             kv_write_indices=None,
