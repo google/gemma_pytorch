@@ -15,8 +15,9 @@
 """Gemma model config."""
 
 import dataclasses
+import enum
 import torch
-from typing import Optional
+from typing import Optional, Sequence
 
 
 # Keep a mapping from dtype strings to the supported torch dtypes.
@@ -28,8 +29,20 @@ _STR_DTYPE_TO_TORCH_DTYPE = dict({
 })
 
 
+class AttentionType(enum.Enum):
+    GLOBAL = 1
+    LOCAL_SLIDING = 2
+
+
+class Architecture(enum.Enum):
+    GEMMA_1 = 1
+    GEMMA_2 = 2
+
+
 @dataclasses.dataclass
 class GemmaConfig:
+    # The architecture of the model.
+    architecture: Architecture = Architecture.GEMMA_1
     # The number of tokens in the vocabulary.
     vocab_size: int = 256000
     # The maximum sequence length that this model might ever be used with.
@@ -54,6 +67,21 @@ class GemmaConfig:
     quant: bool = False
     # The path to the model tokenizer.
     tokenizer: Optional[str] = 'tokenizer/tokenizer.model'
+    # The types of attention used in the layers of the model.
+    attn_types: Optional[Sequence[AttentionType]] = None
+    # The size of the sliding window used for local attention.
+    sliding_window_size: Optional[int] = None
+    # If provided, the final logits are softcapped to this value.
+    final_logit_softcapping: Optional[float] = None
+    # If provided, the attention logits are softcapped to this value.
+    attn_logit_softcapping: Optional[float] = None
+    # If provided, the query vector is normalized using the
+    # inverse square root of this value instead of head_dim.
+    query_pre_attn_scalar: Optional[int] = None
+    # Whether to use pre mlp normalization.
+    use_pre_ffw_norm: bool = False
+    # Whether to use post mlp normalization.
+    use_post_ffw_norm: bool = False
 
     def get_dtype(self) -> Optional[torch.dtype]:
         """Gets the torch dtype from the config dtype string."""
@@ -74,10 +102,55 @@ def get_config_for_2b() -> GemmaConfig:
     )
 
 
+def get_config_for_9b() -> GemmaConfig:
+    return GemmaConfig(
+        architecture=Architecture.GEMMA_2,
+        num_hidden_layers=42,
+        num_attention_heads=16,
+        num_key_value_heads=8,
+        hidden_size=3584,
+        intermediate_size=14336,
+        use_pre_ffw_norm=True,
+        use_post_ffw_norm=True,
+        final_logit_softcapping=30.0,
+        attn_logit_softcapping=50.0,
+        head_dim=256,
+        attn_types=[AttentionType.LOCAL_SLIDING, AttentionType.GLOBAL] * 21,
+        sliding_window_size=4096,
+        query_pre_attn_scalar=224,  # hidden_size / num_attention_heads
+    )
+
+
+def get_config_for_27b() -> GemmaConfig:
+    return GemmaConfig(
+        architecture=Architecture.GEMMA_2,
+        num_hidden_layers=46,
+        num_attention_heads=32,
+        num_key_value_heads=16,
+        hidden_size=4608,
+        intermediate_size=36864,
+        use_pre_ffw_norm=True,
+        use_post_ffw_norm=True,
+        final_logit_softcapping=30.0,
+        attn_logit_softcapping=50.0,
+        head_dim=128,
+        attn_types=[AttentionType.LOCAL_SLIDING, AttentionType.GLOBAL] * 23,
+        sliding_window_size=4096,
+        query_pre_attn_scalar=144,  # hidden_size / num_attention_heads
+    )
+
+
 def get_model_config(variant: str) -> GemmaConfig:
     if variant == '7b':
         return get_config_for_7b()
     elif variant == '2b':
         return get_config_for_2b()
-    raise ValueError(f'Invalid variant {variant}. Supported variants are "2b"'
-                        'and "7b"')
+    elif variant == '9b':
+        return get_config_for_9b()
+    elif variant == '27b':
+        return get_config_for_27b()
+    else:
+        raise ValueError(
+                f'Invalid variant {variant}. Supported variants are "2b"'
+                 'and "7b" and "9b" and "27b".')
+

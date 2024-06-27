@@ -14,11 +14,14 @@
 
 """Inference-only Gemma model implementation."""
 
+import json
+import gc
+import os
 import re
 import torch
 from torch import nn
 import torch.nn.functional as F
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
 
 from gemma import config as gemma_config
 from gemma.xla_model_parallel import (
@@ -32,11 +35,13 @@ from gemma.xla_model_parallel import (
 
 class Sampler(nn.Module):
 
-    def __init__(self, vocab_size: int, world_size: int, rank: int) -> None:
+    def __init__(self, vocab_size: int, world_size: int, rank: int,
+                 config: gemma_config.GemmaConfig) -> None:
         super().__init__()
         self.vocab_size = vocab_size
         self.world_size = world_size
         self.rank = rank
+        self.config = config
 
     @torch.no_grad()
     def forward(
@@ -69,6 +74,10 @@ class Sampler(nn.Module):
         )
         if embedding_bias is not None:
             logits += embedding_bias
+        if self.config.final_logit_softcapping is not None:
+            logits.div_(self.config.final_logit_softcapping)
+            logits = torch.tanh(logits)
+            logits.mul_(self.config.final_logit_softcapping)
 
         if temperatures is None:
             return torch.argmax(logits, dim=-1).squeeze(dim=-1), logits
@@ -215,10 +224,14 @@ class GemmaAttention(nn.Module):
         hidden_size: int,
         num_heads: int,
         num_kv_heads: int,
+        attn_logit_softcapping: Optional[float],
+        query_pre_attn_scalar: Optional[int],
         head_dim: int,
         world_size: int,
         rank: int,
         quant: bool,
+        attn_type: gemma_config.AttentionType,
+        sliding_window_size: Optional[int] = None,
     ):
         super().__init__()
         self.rank = rank
@@ -247,7 +260,10 @@ class GemmaAttention(nn.Module):
         self.q_size = self.num_heads * self.head_dim
         self.kv_size = self.num_kv_heads * self.head_dim
 
-        self.scaling = self.head_dim**-0.5
+        if query_pre_attn_scalar is not None:
+            self.scaling = query_pre_attn_scalar**-0.5
+        else:
+            self.scaling = self.head_dim**-0.5
 
         self.qkv_proj = ColumnParallelLinear(
             self.hidden_size,
@@ -271,6 +287,10 @@ class GemmaAttention(nn.Module):
             rank=rank,
             quant=quant,
         )
+
+        self.attn_type = attn_type
+        self.sliding_window_size = sliding_window_size
+        self.attn_logit_softcapping = attn_logit_softcapping
 
     def forward(
         self,
@@ -319,7 +339,21 @@ class GemmaAttention(nn.Module):
         v = value.transpose(1, 2)
 
         # [batch_size, n_local_heads, input_len, max_seq_len]
-        scores = torch.matmul(q, k.transpose(2, 3)) * self.scaling
+        q.mul_(self.scaling)
+        scores = torch.matmul(q, k.transpose(2, 3))
+        if (
+            self.attn_type == gemma_config.AttentionType.LOCAL_SLIDING
+            and self.sliding_window_size is not None
+        ):
+            all_ones = torch.ones_like(mask)
+            sliding_mask = torch.triu(
+                all_ones, -1 * self.sliding_window_size + 1
+            ) * torch.tril(all_ones, self.sliding_window_size - 1)
+            mask = torch.where(sliding_mask == 1, mask, -2.3819763e38)
+        if self.attn_logit_softcapping is not None:
+            scores.div_(self.attn_logit_softcapping)
+            scores = torch.tanh(scores)
+            scores.mul_(self.attn_logit_softcapping)
         scores = scores + mask
         scores = F.softmax(scores.float(), dim=-1).type_as(q)
 
@@ -347,10 +381,13 @@ class GemmaDecoderLayer(nn.Module):
             hidden_size=config.hidden_size,
             num_heads=config.num_attention_heads,
             num_kv_heads=config.num_key_value_heads,
+            attn_logit_softcapping=config.attn_logit_softcapping,
+            query_pre_attn_scalar=config.query_pre_attn_scalar,
             head_dim=config.head_dim,
             world_size=world_size,
             rank=rank,
             quant=config.quant,
+            attn_type=gemma_config.AttentionType.GLOBAL,
         )
         self.mlp = GemmaMLP(
             hidden_size=config.hidden_size,
@@ -393,6 +430,85 @@ class GemmaDecoderLayer(nn.Module):
         return hidden_states
 
 
+class Gemma2DecoderLayer(nn.Module):
+
+    def __init__(
+        self,
+        config: gemma_config.GemmaConfig,
+        attn_type: gemma_config.AttentionType,
+        world_size: int,
+        rank: int,
+    ):
+        super().__init__()
+        self.rank = rank
+        self.self_attn = GemmaAttention(
+            hidden_size=config.hidden_size,
+            num_heads=config.num_attention_heads,
+            num_kv_heads=config.num_key_value_heads,
+            attn_logit_softcapping=config.attn_logit_softcapping,
+            query_pre_attn_scalar=config.query_pre_attn_scalar,
+            head_dim=config.head_dim,
+            world_size=world_size,
+            rank=rank,
+            quant=config.quant,
+            attn_type=attn_type,
+            sliding_window_size=config.sliding_window_size,
+        )
+        self.mlp = GemmaMLP(
+            hidden_size=config.hidden_size,
+            intermediate_size=config.intermediate_size,
+            world_size=world_size,
+            rank=rank,
+            quant=config.quant,
+        )
+        self.input_layernorm = RMSNorm(config.hidden_size,
+                                       eps=config.rms_norm_eps)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size,
+                                                eps=config.rms_norm_eps)
+        self.pre_feedforward_layernorm = (
+            RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+            if config.use_pre_ffw_norm
+            else None
+        )
+        self.post_feedforward_layernorm = (
+            RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+            if config.use_post_ffw_norm
+            else None
+        )
+
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        freqs_cis: torch.Tensor,
+        kv_write_indices: torch.Tensor,
+        kv_cache: Tuple[torch.Tensor, torch.Tensor],
+        mask: torch.Tensor,
+    ) -> torch.Tensor:
+        # Self Attention
+        residual = hidden_states
+        hidden_states = self.input_layernorm(hidden_states)
+        hidden_states = self.self_attn(
+            hidden_states=hidden_states,
+            freqs_cis=freqs_cis,
+            kv_write_indices=kv_write_indices,
+            kv_cache=kv_cache,
+            mask=mask,
+        )
+        hidden_states = self.post_attention_layernorm(hidden_states)
+        hidden_states = residual + hidden_states
+
+        # MLP
+        residual = hidden_states
+        if self.pre_feedforward_layernorm is not None:
+            hidden_states = self.pre_feedforward_layernorm(hidden_states)
+        hidden_states = self.mlp(hidden_states)
+        if self.post_feedforward_layernorm is not None:
+            hidden_states = self.post_feedforward_layernorm(hidden_states)
+        hidden_states = residual + hidden_states
+
+        return hidden_states
+
+
 class GemmaModel(nn.Module):
 
     def __init__(
@@ -407,8 +523,19 @@ class GemmaModel(nn.Module):
         self.vocab_size = config.vocab_size
 
         self.layers = nn.ModuleList()
-        for _ in range(config.num_hidden_layers):
-            self.layers.append(GemmaDecoderLayer(config, world_size, rank))
+        for i in range(config.num_hidden_layers):
+            if config.architecture == gemma_config.Architecture.GEMMA_1:
+                self.layers.append(GemmaDecoderLayer(config))
+            elif config.architecture == gemma_config.Architecture.GEMMA_2:
+                attn_type = (
+                    config.attn_types[i]
+                    if config.attn_types is not None
+                    else gemma_config.AttentionType.GLOBAL
+                )
+                self.layers.append(
+                    Gemma2DecoderLayer(config, attn_type, world_size, rank))
+            else:
+                raise ValueError(f'Unknown architecture: {config.architecture}')
         self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
     def forward(
@@ -466,7 +593,7 @@ class GemmaForCausalLM(nn.Module):
             quant=config.quant,
         )
         self.model = GemmaModel(config, world_size, rank)
-        self.sampler = Sampler(vocab_size, world_size, rank)
+        self.sampler = Sampler(vocab_size, world_size, rank, config)
 
         rope_theta = getattr(config, 'rope_theta', 10000)
         # [head_dim * 2, ] -> complex -> two dim (real, imaginary) implicitly
@@ -518,10 +645,7 @@ class GemmaForCausalLM(nn.Module):
         )
         return next_tokens, logits
 
-    def load_weights(self, model_path: str):
-        checkpoint = torch.load(model_path, weights_only=True)
-        model_state_dict = checkpoint['model_state_dict']
-
+    def _load_weights(self, model_state_dict: Mapping[str, torch.Tensor]):
         num_attn_heads = self.config.num_attention_heads
         num_kv_heads = self.config.num_key_value_heads
         head_dim = self.config.head_dim
@@ -540,11 +664,9 @@ class GemmaForCausalLM(nn.Module):
         for k, v in model_state_dict.items():
             if k == 'freqs_cis':
                 continue
-            if (k == 'model.norm.weight' or re.fullmatch(
-                    r'model.layers.\d+.input_layernorm.weight', k)
-                    or re.fullmatch(
-                        r'model.layers.\d+.post_attention_layernorm.weight',
-                        k) or k.endswith('weight_scaler')):
+            if (k == 'model.norm.weight'
+                or k.endswith('_layernorm.weight')
+                or k.endswith('weight_scaler')):
                 pass
             elif (k == 'embedder.weight' or re.fullmatch(
                     r'model.layers.\d+.mlp.down_proj.weight', k)):
@@ -554,8 +676,10 @@ class GemmaForCausalLM(nn.Module):
                 v = split(v, 0)
             elif re.fullmatch(r'model.layers.\d+.self_attn.qkv_proj.weight',
                               k):
-                if num_kv_heads <= self.world_size:
-                    num_replicas = self.world_size // num_kv_heads
+                if num_kv_heads <= num_attn_heads:
+                    # If num_kv_heads > self.world_size, we still want 1
+                    # replica.
+                    num_replicas = max(self.world_size // num_kv_heads, 1)
                     v = v.reshape(num_attn_heads + num_kv_heads * 2, head_dim,
                                   hidden_size)
                     query = v[:num_attn_heads, ...]
@@ -576,3 +700,20 @@ class GemmaForCausalLM(nn.Module):
             else:
                 raise ValueError(f'Unrecognized key: {k}')
             self.state_dict()[k].copy_(v)
+
+    def load_weights(self, model_path: str):
+        if os.path.isfile(model_path):
+            checkpoint = torch.load(model_path, weights_only=True)
+            model_state_dict = checkpoint['model_state_dict']
+            self._load_weights(model_state_dict)
+        else:
+            index_path = os.path.join(model_path, 'pytorch_model.bin.index.json')
+            with open(index_path, "r", encoding="utf-8") as f:
+                index = json.load(f)
+            shard_files = list(set(index["weight_map"].values()))
+            for shard_file in shard_files:
+                shard_path = os.path.join(model_path, shard_file)
+                state_dict = torch.load(shard_path, map_location="cpu", weights_only=True)
+                self._load_weights(state_dict)
+                del state_dict  # Save memory.
+                gc.collect()
