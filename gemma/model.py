@@ -52,9 +52,9 @@ class Sampler(nn.Module):
         if embedding_bias is not None:
             logits += embedding_bias
         if self.config.final_logit_softcapping is not None:
-            logits.div_(self.config.final_logit_softcapping)
+            logits = logits / self.config.final_logit_softcapping
             logits = torch.tanh(logits)
-            logits.mul_(self.config.final_logit_softcapping)
+            logits = logits * self.config.final_logit_softcapping
 
         if temperatures is None:
             return torch.argmax(logits, dim=-1).squeeze(dim=-1), logits
@@ -314,9 +314,9 @@ class GemmaAttention(nn.Module):
             ) * torch.tril(all_ones, self.sliding_window_size - 1)
             mask = torch.where(sliding_mask == 1, mask, -2.3819763e38)
         if self.attn_logit_softcapping is not None:
-            scores.div_(self.attn_logit_softcapping)
+            scores = scores / self.attn_logit_softcapping
             scores = torch.tanh(scores)
-            scores.mul_(self.attn_logit_softcapping)
+            scores = scores * self.attn_logit_softcapping
         scores = scores + mask
         scores = F.softmax(scores.float(), dim=-1).type_as(q)
 
