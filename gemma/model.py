@@ -179,12 +179,14 @@ class RMSNorm(torch.nn.Module):
         return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
 
     def forward(self, x):
-        x = self._norm(x.float()).type_as(x)
+        # Llama does x.to(float16) * w whilst Gemma2 is (x * w).to(float16)
+        # See https://github.com/huggingface/transformers/pull/29402
+        output = self._norm(x.float())
         if self.add_unit_offset:
-            output = x * (1 + self.weight)
+            output = output * (1 + self.weight.float())
         else:
-            output = x * self.weight
-        return output
+            output = output * self.weight.float()
+        return output.type_as(x)
 
 
 class GemmaMLP(nn.Module):
@@ -546,7 +548,10 @@ class GemmaForCausalLM(nn.Module):
         # [batch_size, input_len, hidden_size]
         hidden_states = self.embedder(input_token_ids)
         # Gemma normalizes the embedding by sqrt(hidden_size).
-        hidden_states = hidden_states * (self.config.hidden_size**0.5)
+        # Gemma2 downcasts the below to float16, causing sqrt(3072)=55.4256 to become 55.5
+        # See https://github.com/huggingface/transformers/pull/29402
+        normalizer = torch.tensor(self.config.hidden_size**0.5, dtype=hidden_states.dtype)
+        hidden_states = hidden_states * normalizer
 
         hidden_states = self.model(
             hidden_states=hidden_states,
