@@ -117,7 +117,6 @@ def get_config_for_9b() -> GemmaConfig:
         head_dim=256,
         attn_types=[AttentionType.LOCAL_SLIDING, AttentionType.GLOBAL] * 21,
         sliding_window_size=4096,
-        query_pre_attn_scalar=224,  # hidden_size / num_attention_heads
     )
 
 
