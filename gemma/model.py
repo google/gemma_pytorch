@@ -13,6 +13,7 @@
 # limitations under the License.
 """Inference-only Gemma model implementation."""
 
+import re
 import torch
 from torch import nn
 import torch.nn.functional as F
