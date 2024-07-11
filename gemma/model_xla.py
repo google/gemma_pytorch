@@ -21,7 +21,7 @@ import re
 import torch
 from torch import nn
 import torch.nn.functional as F
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import List, Mapping, Optional, Tuple, Union
 
 from gemma import config as gemma_config
 from gemma.xla_model_parallel import (
