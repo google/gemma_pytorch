@@ -26,9 +26,9 @@ installed, you can also run:
 
 ```
 huggingface-cli download google/gemma-7b-it-pytorch
-``` 
+```
 
-Note that you can choose between the 2B, 7B, 7B int8 quantized variants.
+Note that you can choose between the 2B, 2B V2, 7B, 7B int8 quantized, 9B, and 27B variants.
 
 ```
 VARIANT=<2b or 7b or 9b or 27b>

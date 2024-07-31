@@ -65,7 +65,7 @@ if __name__ == "__main__":
     parser.add_argument("--variant",
                         type=str,
                         default="2b",
-                        choices=["2b", "7b", "9b", "27b"])
+                        choices=["2b", "2b-v2", "7b", "9b", "27b"])
     parser.add_argument("--device",
                         type=str,
                         default="cpu",

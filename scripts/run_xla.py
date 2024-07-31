@@ -257,7 +257,7 @@ if __name__ == '__main__':
     parser.add_argument("--variant",
                         type=str,
                         default="2b",
-                        choices=["2b", "7b", "9b", "27b"])
+                        choices=["2b", "2b-v2", "7b", "9b", "27b"])
     parser.add_argument("--output_len", type=int, default=4)
     parser.add_argument("--seed", type=int, default=12345)
     parser.add_argument("--quant", action='store_true')

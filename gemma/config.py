@@ -102,6 +102,24 @@ def get_config_for_2b() -> GemmaConfig:
     )
 
 
+def get_config_for_2b_v2() -> GemmaConfig:
+    return GemmaConfig(
+        architecture=Architecture.GEMMA_2,
+        num_hidden_layers=26,
+        num_attention_heads=8,
+        num_key_value_heads=4,
+        hidden_size=2304,
+        intermediate_size=9216,
+        use_pre_ffw_norm=True,
+        use_post_ffw_norm=True,
+        final_logit_softcapping=30.0,
+        attn_logit_softcapping=50.0,
+        head_dim=256,
+        attn_types=[AttentionType.LOCAL_SLIDING, AttentionType.GLOBAL] * 13,
+        sliding_window_size=4096,
+    )
+
+
 def get_config_for_9b() -> GemmaConfig:
     return GemmaConfig(
         architecture=Architecture.GEMMA_2,
@@ -144,6 +162,8 @@ def get_model_config(variant: str) -> GemmaConfig:
         return get_config_for_7b()
     elif variant == '2b':
         return get_config_for_2b()
+    elif variant == '2b-v2':
+        return get_config_for_2b_v2()
     elif variant == '9b':
         return get_config_for_9b()
     elif variant == '27b':
