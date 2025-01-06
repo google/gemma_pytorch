@@ -527,7 +527,7 @@ class GemmaModel(nn.Module):
         self.layers = nn.ModuleList()
         for i in range(config.num_hidden_layers):
             if config.architecture == gemma_config.Architecture.GEMMA_1:
-                self.layers.append(GemmaDecoderLayer(config))
+                self.layers.append(GemmaDecoderLayer(config, world_size, rank))
             elif config.architecture == gemma_config.Architecture.GEMMA_2:
                 attn_type = (
                     config.attn_types[i]
