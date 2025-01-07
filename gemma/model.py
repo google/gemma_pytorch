@@ -590,6 +590,7 @@ class GemmaForCausalLM(nn.Module):
 
         batch_size = len(prompts)
         prompt_tokens = [self.tokenizer.encode(prompt) for prompt in prompts]
+        prompt_length = [len(p) for p in prompt_tokens]
         min_prompt_len = min(len(p) for p in prompt_tokens)
         max_prompt_len = max(len(p) for p in prompt_tokens)
         max_seq_len = max_prompt_len + output_len
@@ -632,6 +633,7 @@ class GemmaForCausalLM(nn.Module):
         top_ks_tensor = torch.LongTensor([top_k] * batch_size).to(device)
         output_index = torch.tensor(min_prompt_len, dtype=torch.int64).to(
             device)
+        eos_flags_tensor = torch.tensor([False] * batch_size).to(device)
 
         # Prefill up to min_prompt_len tokens, then treat other prefill as
         # decode and ignore output.
@@ -663,6 +665,16 @@ class GemmaForCausalLM(nn.Module):
             output_positions_tensor = torch.tensor(0, dtype=torch.int64).to(
                 device)
             output_index = output_index + 1
+
+            # Check if all sequences have reached EOS.
+            batch_eos_idx = (next_token_ids == self.tokenizer.eos_id).nonzero(
+                as_tuple=True)[0]
+            for eos_idx in batch_eos_idx:
+                if output_index >= prompt_length[eos_idx]:
+                    eos_flags_tensor[eos_idx] = True
+
+            if eos_flags_tensor.all():
+                break
 
         # Detokenization.
         token_ids = token_ids_tensor.tolist()
