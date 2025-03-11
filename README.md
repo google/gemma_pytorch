@@ -1,37 +1,52 @@
 # Gemma in PyTorch
 
-**Gemma** is a family of lightweight, state-of-the art open models built from research and technology used to create Google Gemini models. They are text-to-text, decoder-only large language models, available in English, with open weights, pre-trained variants, and instruction-tuned variants. For more details, please check out the following links:
+**Gemma** is a family of lightweight, state-of-the art open models built from research and technology used to create Google Gemini models. They include both text-only and multimodal decoder-only large language models, with open weights, pre-trained variants, and instruction-tuned variants. For more details, please check out the following links:
 
  * [Gemma on Google AI](https://ai.google.dev/gemma)
- * [Gemma on Kaggle](https://www.kaggle.com/models/google/gemma)
- * [Gemma on Vertex AI Model Garden](https://console.cloud.google.com/vertex-ai/publishers/google/model-garden/335)
+ * [Gemma on Kaggle](https://www.kaggle.com/models/google/gemma-3)
+ * [Gemma on Vertex AI Model Garden](https://pantheon.corp.google.com/vertex-ai/publishers/google/model-garden/gemma3)
 
-This is the official PyTorch implementation of Gemma models. We provide model and inference implementations using both PyTorch and PyTorch/XLA, and support running inference on CPU, GPU and TPU. 
+This is the official PyTorch implementation of Gemma models. We provide model and inference implementations using both PyTorch and PyTorch/XLA, and support running inference on CPU, GPU and TPU.
 
 ## Updates
 
- * [June 26th 🔥] Support Gemma v2. You can find the checkpoints [on Kaggle](https://www.kaggle.com/models/google/gemma-2/pytorch) and Hugging Face
+ * [March 12th, 2025 🔥] Support Gemma v3. You can find the checkpoints [on Kaggle](https://www.kaggle.com/models/google/gemma-3/pytorch) and [Hugging Face](https://huggingface.co/models?other=gemma_torch)
 
- * [April 9th] Support CodeGemma. You can find the checkpoints [on Kaggle](https://www.kaggle.com/models/google/codegemma/pytorch) and [Hugging Face](https://huggingface.co/collections/google/codegemma-release-66152ac7b683e2667abdee11)
+ * [June 26th, 2024] Support Gemma v2. You can find the checkpoints [on Kaggle](https://www.kaggle.com/models/google/gemma-2/pytorch) and Hugging Face
 
- * [April 5] Support Gemma v1.1. You can find the v1.1 checkpoints [on Kaggle](https://www.kaggle.com/models/google/gemma/frameworks/pyTorch) and [Hugging Face](https://huggingface.co/collections/google/gemma-release-65d5efbccdbb8c4202ec078b).
+ * [April 9th, 2024] Support CodeGemma. You can find the checkpoints [on Kaggle](https://www.kaggle.com/models/google/codegemma/pytorch) and [Hugging Face](https://huggingface.co/collections/google/codegemma-release-66152ac7b683e2667abdee11)
+
+ * [April 5, 2024] Support Gemma v1.1. You can find the v1.1 checkpoints [on Kaggle](https://www.kaggle.com/models/google/gemma/frameworks/pyTorch) and [Hugging Face](https://huggingface.co/collections/google/gemma-release-65d5efbccdbb8c4202ec078b).
 
 ## Download Gemma model checkpoint
 
-You can find the model checkpoints on Kaggle
-[here](https://www.kaggle.com/models/google/gemma/frameworks/pyTorch).
+You can find the model checkpoints on Kaggle:
 
-Alternatively, you can find the model checkpoints on the Hugging Face Hub [here](https://huggingface.co/models?other=gemma_torch). To download the models, go the the model repository of the model of interest and click the `Files and versions` tab, and download the model and tokenizer files. For  programmatic downloading, if you have `huggingface_hub`
-installed, you can also run:
+- [Gemma 3](https://www.kaggle.com/models/google/gemma-3/pyTorch)
+- [Gemma 2](https://www.kaggle.com/models/google/gemma-2/pyTorch)
+- [Gemma](https://www.kaggle.com/models/google/gemma/pyTorch)
 
-```
-huggingface-cli download google/gemma-7b-it-pytorch
-```
-
-Note that you can choose between the 2B, 2B V2, 7B, 7B int8 quantized, 9B, and 27B variants.
+Alternatively, you can find the model checkpoints on the Hugging Face Hub [here](https://huggingface.co/models?other=gemma_torch). To download the models, go the the model repository of the model of interest and click the `Files and versions` tab, and download the model and tokenizer files. For  programmatic downloading, if you have `huggingface_hub` installed, you can also run:
 
 ```
-VARIANT=<2b or 7b or 9b or 27b>
+huggingface-cli download google/gemma-3-4b-it-pytorch
+```
+
+The following model sizes are available:
+
+- **Gemma 3**: 
+  - **Text only**: 1b
+  - **Multimodal**: 4b, 12b, 27b_v3
+- **Gemma 2**: 
+  - **Text only**: 2b-v2, 9b, 27b
+- **Gemma**: 
+  - **Text only**: 2b, 7b
+
+
+Note that you can choose between the 1B, 4B, 12B, and 27B variants.
+
+```
+VARIANT=<1b, 2b, 2b-v2, 4b, 7b, 9b, 12b, 27b, 27b_v3>
 CKPT_PATH=<Insert ckpt path here>
 ```
 
@@ -59,33 +74,31 @@ docker build -f docker/Dockerfile ./ -t ${DOCKER_URI}
 
 ### Run Gemma inference on CPU.
 
-```bash
-PROMPT="The meaning of life is"
+> NOTE: This is a multimodal example. Use a multimodal variant.
 
+```bash
 docker run -t --rm \
     -v ${CKPT_PATH}:/tmp/ckpt \
     ${DOCKER_URI} \
-    python scripts/run.py \
+    python scripts/run_multimodal.py \
     --ckpt=/tmp/ckpt \
     --variant="${VARIANT}" \
-    --prompt="${PROMPT}"
     # add `--quant` for the int8 quantized model.
 ```
 
 ### Run Gemma inference on GPU.
 
-```bash
-PROMPT="The meaning of life is"
+> NOTE: This is a multimodal example. Use a multimodal variant.
 
+```bash
 docker run -t --rm \
     --gpus all \
     -v ${CKPT_PATH}:/tmp/ckpt \
     ${DOCKER_URI} \
-    python scripts/run.py \
+    python scripts/run_multimodal.py \
     --device=cuda \
     --ckpt=/tmp/ckpt \
-    --variant="${VARIANT}" \
-    --prompt="${PROMPT}"
+    --variant="${VARIANT}"
     # add `--quant` for the int8 quantized model.
 ```
 
@@ -108,6 +121,8 @@ docker build -f docker/xla_gpu.Dockerfile ./ -t ${DOCKER_URI}
 ```
 
 ### Run Gemma inference on CPU.
+
+> NOTE: This is a multimodal example. Use a multimodal variant.
 
 ```bash
 docker run -t --rm \
@@ -156,14 +171,14 @@ docker run -t --rm --privileged \
 
 ### Tokenizer Notes
 
-99 unused tokens are reserved in the pretrained tokenizer model to assist with more efficient training/fine-tuning. Unused tokens are in the string format of `<unused[0-98]>` with token id range of `[7-105]`. 
+99 unused tokens are reserved in the pretrained tokenizer model to assist with more efficient training/fine-tuning. Unused tokens are in the string format of `<unused[0-97]>` with token id range of `[7-104]`. 
 
 ```
 "<unused0>": 7,
 "<unused1>": 8,
 "<unused2>": 9,
 ...
-"<unused98>": 105,
+"<unused98>": 104,
 ```
 
 ## Disclaimer
