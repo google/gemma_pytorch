@@ -1,3 +1,5 @@
-numpy == 1.24.4
-sentencepiece == 0.1.99
-torch
+numpy==2.2.3
+pillow==11.1.0
+sentencepiece==0.2.0
+torch==2.6.0
+absl-py==2.1.0

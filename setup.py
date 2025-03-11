@@ -55,6 +55,6 @@ setuptools.setup(
     ],
     packages=setuptools.find_packages(exclude=("benchmarks", "docs",
                                                "examples", "tests")),
-    python_requires=">=3.8",
+    python_requires=">=3.11",
     install_requires=get_requirements(),
 )
