@@ -670,7 +670,7 @@ class GemmaForCausalLM(nn.Module):
                                  -2.3819763e38).to(torch.float)
     mask_tensor = torch.triu(mask_tensor, diagonal=1).to(device)
     local_mask_tensor = mask_tensor + torch.tril(
-            torch.full((1, 1, max_seq_len, max_seq_len), -2.3819763e38),
+            torch.full((1, 1, max_seq_len, max_seq_len), -2.3819763e38, device=device),
             diagonal=-self.config.sliding_window_size,
         ) if self.config.sliding_window_size else None
     curr_mask_tensor = mask_tensor.index_select(2, input_positions_tensor)
