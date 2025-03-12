@@ -677,7 +677,7 @@ class GemmaForCausalLM(nn.Module):
     curr_local_mask_tensor = local_mask_tensor.index_select(
           2, input_positions_tensor
       ) if local_mask_tensor is not None else None
-    output_positions_tensor = torch.LongTensor([min_prompt_len - 1], device=device)
+    output_positions_tensor = torch.LongTensor([min_prompt_len - 1]).to(device)
     temperatures_tensor = None if not temperature else torch.FloatTensor(
             [temperature] * batch_size).to(device)
     top_ps_tensor = torch.FloatTensor([top_p] * batch_size).to(device)
