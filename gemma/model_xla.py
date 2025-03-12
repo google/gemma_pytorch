@@ -23,8 +23,8 @@ from torch import nn
 import torch.nn.functional as F
 from typing import List, Mapping, Optional, Tuple, Union
 
-from gemma import config as gemma_config
-from gemma.xla_model_parallel import (
+from google3.third_party.open_models_release.gemma_pytorch.gemma import config as gemma_config
+from google3.third_party.open_models_release.gemma_pytorch.gemma.xla_model_parallel import (
     ColumnParallelLinear,
     ParallelEmbedding,
     RowParallelLinear,
