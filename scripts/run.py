@@ -68,7 +68,7 @@ def _set_default_tensor_type(dtype: torch.dtype):
 def main(_):
     # Construct the model config.
     model_config = config.get_model_config(FLAGS.variant)
-    model_config.dtype = "float32" if FLAGS.device == "cpu" else "float16"
+    model_config.dtype = "float32"
     model_config.quant = FLAGS.quant
 
     # Seed random.

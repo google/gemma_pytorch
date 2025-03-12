@@ -594,7 +594,7 @@ class GemmaForCausalLM(nn.Module):
     # Gemma normalizes the embedding by sqrt(hidden_size).
     # Gemma2 downcasts the below to float16, causing sqrt(3072)=55.4256 to become 55.5
     # See https://github.com/huggingface/transformers/pull/29402
-    normalizer = torch.tensor(self.config.hidden_size**0.5, dtype=hidden_states.dtype)
+    normalizer = torch.tensor(self.config.hidden_size**0.5, dtype=hidden_states.dtype, device=hidden_states.device)
     hidden_states = hidden_states * normalizer
 
     hidden_states = self.model(
@@ -677,7 +677,7 @@ class GemmaForCausalLM(nn.Module):
     curr_local_mask_tensor = local_mask_tensor.index_select(
           2, input_positions_tensor
       ) if local_mask_tensor is not None else None
-    output_positions_tensor = torch.LongTensor([min_prompt_len - 1]).to(device)
+    output_positions_tensor = torch.LongTensor([min_prompt_len - 1], device=device)
     temperatures_tensor = None if not temperature else torch.FloatTensor(
             [temperature] * batch_size).to(device)
     top_ps_tensor = torch.FloatTensor([top_p] * batch_size).to(device)

@@ -85,7 +85,7 @@ def _set_default_tensor_type(dtype: torch.dtype):
 def main(_):
   # Construct the model config.
   model_config = config.get_model_config(_VARIANT.value)
-  model_config.dtype = 'float32' if _DEVICE.value == 'cpu' else 'float16'
+  model_config.dtype = 'float32'
   model_config.quant = _QUANT.value
   image_paths = {"cow_in_beach": "scripts/images/cow_in_beach.jpg",
                    "lilly": "scripts/images/lilly.jpg",

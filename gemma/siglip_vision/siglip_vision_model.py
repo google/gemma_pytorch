@@ -104,7 +104,7 @@ class SiglipMLP(nn.Module):
         * (
             1
             + torch.tanh(
-                torch.sqrt(torch.tensor(2.0 / torch.pi))
+                torch.sqrt(torch.tensor(2.0 / torch.pi, device=x.device))
                 * (x + 0.044715 * torch.pow(x, 3))
             )
         )
@@ -192,7 +192,8 @@ class SiglipVisionModel(nn.Module):
     # (batch_size,channels,height,width)->(batch_size, height*width, channels)
     x = x.flatten(2).transpose(1, 2)
 
-    x = x + self.position_embedding(self.position_ids)
+    position_ids = self.position_ids.to(pixel_values.device)
+    x = x + self.position_embedding(position_ids)
 
     for block in self.encoder_blocks:
       x = block(x)  # batch_size, height*width, embedding_dim (1152)

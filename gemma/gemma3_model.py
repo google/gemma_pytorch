@@ -97,7 +97,7 @@ class Gemma3ForMultimodalLM(nn.Module):
             self.global_freqs_cis.index_select(0, input_positions)
         )
     hidden_states = self.text_token_embedder(input_token_ids)
-    normalizer = torch.tensor(self.config.hidden_size**0.5, dtype=hidden_states.dtype)
+    normalizer = torch.tensor(self.config.hidden_size**0.5, dtype=hidden_states.dtype, device=hidden_states.device)
     hidden_states = hidden_states * normalizer
     if image_patches is not None and self.config.vision_config is not None:
       # the input has images
@@ -127,7 +127,7 @@ class Gemma3ForMultimodalLM(nn.Module):
     embedder_weight = self.text_token_embedder.weight
     if self.config.quant:
       embedder_weight = (
-                embedder_weight * self.embedder.weight_scaler.unsqueeze(-1))
+                embedder_weight * self.text_token_embedder.weight_scaler.unsqueeze(-1))
 
     next_tokens, logits = self.sampler(
             embedding=embedder_weight,
@@ -162,7 +162,7 @@ class Gemma3ForMultimodalLM(nn.Module):
 
   def create_attention_mask(self, input_ids: torch.Tensor, sequence_length: int):
     batch_size = input_ids.shape[0]
-    causal_mask = torch.tril(torch.ones((batch_size, 1, sequence_length, sequence_length), dtype=torch.bool))
+    causal_mask = torch.tril(torch.ones((batch_size, 1, sequence_length, sequence_length), dtype=torch.bool, device=input_ids.device))
     image_token_mask = input_ids == self.tokenizer.image_token_placeholder_id
     # Pad the mask to the left with 0. This is to make sure the boundary
     # detection works correctly. Boundary (starting index of image patch) is
@@ -202,7 +202,7 @@ class Gemma3ForMultimodalLM(nn.Module):
     # local attention is within the sliding window.
     local_mask = torch.logical_and(
             attention_mask,
-            torch.triu(torch.ones((1, 1, sequence_length, sequence_length), dtype=torch.bool), diagonal=-(self.config.sliding_window_size-1))
+            torch.triu(torch.ones((1, 1, sequence_length, sequence_length), dtype=torch.bool, device=input_ids.device), diagonal=-(self.config.sliding_window_size-1))
         )
     return attention_mask, local_mask
 
@@ -233,8 +233,8 @@ class Gemma3ForMultimodalLM(nn.Module):
     if self.config.sliding_window_size is None:
       raise ValueError('gemma 3 model requires sliding_window size')
     boolean_mask, local_boolean_mask = self.create_attention_mask(user_input_token_ids, total_seq_len)
-    mask_tensor = torch.where(boolean_mask, 0, min_dtype).contiguous()
-    local_mask_tensor = torch.where(local_boolean_mask, 0, min_dtype).contiguous()
+    mask_tensor = torch.where(boolean_mask, 0, torch.tensor(min_dtype, dtype=torch.float32, device=device)).contiguous()
+    local_mask_tensor = torch.where(local_boolean_mask, 0, torch.tensor(min_dtype, dtype=torch.float32, device=device)).contiguous()
 
     kv_caches = []
     for _ in range(self.config.num_hidden_layers):
@@ -247,25 +247,22 @@ class Gemma3ForMultimodalLM(nn.Module):
 
     input_token_ids_tensor = torch.full((batch_size, min_prompt_len),
                                             self.tokenizer.pad_id,
-                                            dtype=torch.int64)
+                                            dtype=torch.int64, device=device)
     token_ids_tensor = user_input_token_ids.to(device)
     for i in range(batch_size):
       p = user_input_token_ids[i]
       input_token_ids_tensor[i, :min_prompt_len] = p[:min_prompt_len]
 
-    token_ids_tensor = token_ids_tensor.to(device)
-    input_token_ids_tensor = input_token_ids_tensor.to(device)
-    input_positions_tensor = torch.arange(0, min_prompt_len, dtype=torch.int64).to(device)
+    input_positions_tensor = torch.arange(0, min_prompt_len, dtype=torch.int64, device=device)
     prompt_mask_tensor = token_ids_tensor != self.tokenizer.pad_id
     curr_mask_tensor = mask_tensor.index_select(2, input_positions_tensor)
     curr_local_mask_tensor = local_mask_tensor.index_select(2, input_positions_tensor)
-    output_positions_tensor = torch.LongTensor([min_prompt_len - 1])
+    output_positions_tensor = torch.LongTensor([min_prompt_len - 1]).to(device)
     temperatures_tensor = None if not temperature else torch.FloatTensor(
             [temperature] * batch_size).to(device)
     top_ps_tensor = torch.FloatTensor([top_p] * batch_size).to(device)
     top_ks_tensor = torch.LongTensor([top_k] * batch_size).to(device)
-    output_index = torch.tensor(min_prompt_len, dtype=torch.int64).to(
-            device)
+    output_index = torch.tensor(min_prompt_len, dtype=torch.int64, device=device)
 
     # Prefill up to min_prompt_len tokens, then treat other prefill as
     # decode and ignore output.
@@ -298,8 +295,7 @@ class Gemma3ForMultimodalLM(nn.Module):
       curr_local_mask_tensor = local_mask_tensor.index_select(
                 2, input_positions_tensor
             ) if local_mask_tensor is not None else None
-      output_positions_tensor = torch.tensor(0, dtype=torch.int64).to(
-                device)
+      output_positions_tensor = torch.tensor(0, dtype=torch.int64, device=device)
       output_index = output_index + 1
       image_batch = None
       image_presence_mask = None

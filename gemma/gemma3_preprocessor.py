@@ -172,7 +172,7 @@ def tokenize_raw_input(
                         config.vision_config.input_channels,
                         config.vision_config.image_size,
                         config.vision_config.image_size,
-                    )
+                    ), device=device
                 )
                 for _ in range(pad_length)
             ]
@@ -182,12 +182,12 @@ def tokenize_raw_input(
         image_presence_mask.append(presence_mask)
 
     # Convert lists to tensors
-    user_input_token_ids = torch.tensor(user_input_token_ids, dtype=torch.long).to(device)
+    user_input_token_ids = torch.tensor(user_input_token_ids, dtype=torch.long, device=device)
     if max_num_images > 0:
         image_batch = torch.stack([torch.stack(images) for images in image_batch]).to(
             device
         )
-        image_presence_mask = torch.tensor(image_presence_mask, dtype=torch.bool).to(device)
+        image_presence_mask = torch.tensor(image_presence_mask, dtype=torch.bool, device=device)
     else:
         image_batch = None
         image_presence_mask = None
