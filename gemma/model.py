@@ -113,32 +113,7 @@ def apply_rotary_emb(x: torch.Tensor, freqs_cis: torch.Tensor) -> torch.Tensor:
     return x_out
 
 
-class Linear(nn.Module):
-
-    def __init__(self, in_features: int, out_features: int, quant: bool):
-        super().__init__()
-        if quant:
-            self.weight = nn.Parameter(
-                torch.empty((out_features, in_features), dtype=torch.int8),
-                requires_grad=False,
-            )
-            self.weight_scaler = nn.Parameter(torch.Tensor(out_features))
-        else:
-            self.weight = nn.Parameter(
-                torch.empty((out_features, in_features)),
-                requires_grad=False,
-            )
-        self.quant = quant
-
-    def forward(self, x):
-        weight = self.weight
-        if self.quant:
-            weight = weight * self.weight_scaler.unsqueeze(-1)
-        output = F.linear(x, weight)
-        return output
-
-
-class Embedding(nn.Module):
+class QuantizedWeight(nn.Module):
 
     def __init__(self, num_embeddings: int, embedding_dim: int, quant: bool):
         super().__init__()
@@ -155,12 +130,28 @@ class Embedding(nn.Module):
             )
         self.quant = quant
 
-    def forward(self, x):
-        weight = self.weight
+    def get_weight(self):
         if self.quant:
-            weight = weight * self.weight_scaler.unsqueeze(-1)
-        output = F.embedding(x, weight)
-        return output
+            return self.weight * self.weight_scaler.unsqueeze(-1)
+        return self.weight
+
+
+class Linear(QuantizedWeight):
+
+    def __init__(self, num_embeddings: int, embedding_dim: int, quant: bool):
+        super().__init__(num_embeddings, embedding_dim, quant)
+
+    def forward(self, x):
+        return F.linear(x, self.get_weight())
+
+
+class Embedding(QuantizedWeight):
+
+    def __init__(self, num_embeddings: int, embedding_dim: int, quant: bool):
+        super().__init__(num_embeddings, embedding_dim, quant)
+
+    def forward(self, x):
+        return F.embedding(x, self.get_weight())
 
 
 class RMSNorm(torch.nn.Module):
@@ -559,7 +550,6 @@ class GemmaForCausalLM(nn.Module):
         self,
         input_token_ids: torch.Tensor,
         input_positions: torch.Tensor,
-        kv_write_indices: torch.Tensor,
         kv_caches: List[Tuple[torch.Tensor, torch.Tensor]],
         mask: torch.Tensor,
         output_positions: torch.Tensor,
@@ -604,10 +594,7 @@ class GemmaForCausalLM(nn.Module):
             mask=mask,
             local_mask=local_mask,
         )
-    embedder_weight = self.embedder.weight
-    if self.config.quant:
-      embedder_weight = (
-                embedder_weight * self.embedder.weight_scaler.unsqueeze(-1))
+    embedder_weight = self.embedder.get_weight()
     next_tokens, logits = self.sampler(
             embedding=embedder_weight,
             hidden_states=hidden_states,
@@ -690,7 +677,6 @@ class GemmaForCausalLM(nn.Module):
       next_token_ids, _ = self(
                 input_token_ids=input_token_ids_tensor,
                 input_positions=input_positions_tensor,
-                kv_write_indices=None,
                 kv_caches=kv_caches,
                 mask=curr_mask_tensor,
                 output_positions=output_positions_tensor,
