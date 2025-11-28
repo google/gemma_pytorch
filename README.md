@@ -10,6 +10,8 @@ This is the official PyTorch implementation of Gemma models. We provide model an
 
 ## Updates
 
+ * [November 28th, 2025] Master Interactive Agent (iAgent) - New interactive conversational interface with multi-turn conversation support, system prompts, and advanced sampling controls.
+
  * [March 12th, 2025 🔥] Support Gemma v3. You can find the checkpoints [on Kaggle](https://www.kaggle.com/models/google/gemma-3/pytorch) and [Hugging Face](https://huggingface.co/models?other=gemma_torch)
 
  * [June 26th, 2024] Support Gemma v2. You can find the checkpoints [on Kaggle](https://www.kaggle.com/models/google/gemma-2/pytorch) and Hugging Face
@@ -171,7 +173,7 @@ docker run -t --rm --privileged \
 
 ### Tokenizer Notes
 
-99 unused tokens are reserved in the pretrained tokenizer model to assist with more efficient training/fine-tuning. Unused tokens are in the string format of `<unused[0-97]>` with token id range of `[7-104]`. 
+99 unused tokens are reserved in the pretrained tokenizer model to assist with more efficient training/fine-tuning. Unused tokens are in the string format of `<unused[0-97]>` with token id range of `[7-104]`.
 
 ```
 "<unused0>": 7,
@@ -180,6 +182,81 @@ docker run -t --rm --privileged \
 ...
 "<unused98>": 104,
 ```
+
+## Master Interactive Agent (iAgent)
+
+The Master Interactive Agent provides an enhanced conversational interface for interacting with Gemma models. It supports multi-turn conversations, conversation history, system prompts, and advanced sampling parameters.
+
+### Features
+
+- **Interactive Chat Mode**: Real-time conversational interface with the model
+- **Multi-turn Conversations**: Maintains conversation history for context-aware responses
+- **System Prompts**: Set custom system prompts to guide the model's behavior
+- **Advanced Sampling**: Fine-tune temperature, top-p, and top-k parameters
+- **Conversation Management**: Commands to clear history and manage the session
+- **Flexible Modes**: Interactive mode or single-prompt mode
+
+### Basic Usage
+
+**Interactive mode** (default):
+```bash
+python scripts/master_iagent.py \
+  --ckpt=/path/to/checkpoint \
+  --variant=4b \
+  --device=cuda
+```
+
+**With system prompt:**
+```bash
+python scripts/master_iagent.py \
+  --ckpt=/path/to/checkpoint \
+  --variant=4b \
+  --device=cuda \
+  --system_prompt="You are a helpful coding assistant."
+```
+
+**Non-interactive mode** (single prompt):
+```bash
+python scripts/master_iagent.py \
+  --ckpt=/path/to/checkpoint \
+  --variant=4b \
+  --device=cuda \
+  --interactive=false \
+  --prompt="Explain quantum computing in simple terms"
+```
+
+**Custom sampling parameters:**
+```bash
+python scripts/master_iagent.py \
+  --ckpt=/path/to/checkpoint \
+  --variant=4b \
+  --device=cuda \
+  --temperature=0.9 \
+  --top_p=0.95 \
+  --top_k=50 \
+  --output_len=512
+```
+
+### Interactive Commands
+
+When running in interactive mode, you can use the following commands:
+- `/exit` - Exit the interactive agent
+- `/clear` - Clear conversation history
+- `/help` - Show help message
+
+### Configuration Options
+
+- `--ckpt`: Path to the checkpoint file (required)
+- `--variant`: Model variant (1b, 2b, 4b, 7b, 9b, 12b, 27b, etc.)
+- `--device`: Device to run on (cpu or cuda)
+- `--temperature`: Sampling temperature (0.0 for greedy, higher for more random)
+- `--top_p`: Top-p (nucleus) sampling parameter
+- `--top_k`: Top-k sampling parameter
+- `--output_len`: Maximum output length in tokens
+- `--system_prompt`: Optional system prompt to guide the conversation
+- `--max_history`: Maximum number of conversation turns to keep in history
+- `--quant`: Use quantization for reduced memory usage
+- `--seed`: Random seed for reproducibility
 
 ## Disclaimer
 
