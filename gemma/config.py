@@ -233,6 +233,7 @@ def get_config_for_4b(dtype: str) -> GemmaConfig:
           AttentionType.GLOBAL: 1_000_000,
       },
       vocab_size=262_144,
+      max_position_embeddings=131_072,
       tokenizer='tokenizer/gemma3_cleaned_262144_v2.spiece.model',
       use_qk_norm=True,
       vision_config=siglip_vision_config.get_siglip_vision_model_config(),
