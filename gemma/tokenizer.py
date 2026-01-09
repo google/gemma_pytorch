@@ -16,8 +16,10 @@ from typing import List, Optional
 
 import sentencepiece
 
-def _assert_file_exists(model_path: str):
-    assert os.path.isfile(model_path), model_path
+def _assert_file_exists(model_path: Optional[str]):
+    if model_path is None:
+        raise ValueError("model_path cannot be None")
+    assert os.path.isfile(model_path), f"Model file not found: {model_path}"
 
 _BEGIN_IMAGE_TOKEN = 255999
 _END_IMAGE_TOKEN = 256000

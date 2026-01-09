@@ -310,7 +310,7 @@ def get_config_for_27b_v3(dtype: str) -> GemmaConfig:
 
 
 def get_model_config(variant: str, dtype: str = 'bfloat16') -> GemmaConfig:
-  """Gets the GemmaConfig for the diresired variant and dtype."""
+  """Gets the GemmaConfig for the desired variant and dtype."""
   # Gemma1 variants
   if variant == '7b':
     return get_config_for_7b(dtype)
@@ -336,5 +336,5 @@ def get_model_config(variant: str, dtype: str = 'bfloat16') -> GemmaConfig:
   else:
     raise ValueError(
         f'Invalid variant {variant}. Supported variants are "1b", "2b", '
-        '"2b-v2", "4b",, "7b", "9b" "12b", "27b", and "27b_v3".'
+        '"2b-v2", "4b", "7b", "9b", "12b", "27b", and "27b_v3".'
     )

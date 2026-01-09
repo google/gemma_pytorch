@@ -35,7 +35,7 @@ flags.DEFINE_boolean('quant', False, 'Whether to use quantization.')
 flags.DEFINE_string('prompt', 'What are large language models?', 'Input prompt for the model.')
 
 # Define valid text only model variants
-_VALID_MODEL_VARIANTS = ['2b', '2b-v2', '7b', '9b', '27b', '1b']
+_VALID_MODEL_VARIANTS = ['1b', '2b', '2b-v2', '4b', '7b', '9b', '12b', '27b', '27b_v3']
 
 # Define valid devices
 _VALID_DEVICES = ['cpu', 'cuda']

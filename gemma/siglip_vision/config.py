@@ -21,7 +21,7 @@ from . import preprocessor
 # https://developers.googleblog.com/en/gemma-explained-paligemma-architecture/
 @dataclasses.dataclass
 class SiglipVisionModelConfig:
-  """Returns the model config for the vision model of Gemma 3 andPaliGemma."""
+  """Returns the model config for the vision model of Gemma 3 and PaliGemma."""
   # The number of transformer encoder blocks in the siglip encoder model.
   num_hidden_layers: int = 27
   # The dimension of the embedding.
