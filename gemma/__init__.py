@@ -12,3 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .gemma4.modeling import Gemma4ForCausalLM
+from .gemma4.config import Gemma4Config
+
+__all__ = ["Gemma4ForCausalLM", "Gemma4Config"]

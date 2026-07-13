@@ -16,14 +16,17 @@ from typing import List, Optional
 
 import sentencepiece
 
+
 def _assert_file_exists(model_path: str):
     assert os.path.isfile(model_path), model_path
 
+
 _BEGIN_IMAGE_TOKEN = 255999
 _END_IMAGE_TOKEN = 256000
+_AUDIO_TOKEN = 255998
+
 
 class Tokenizer:
-
     def __init__(self, model_path: Optional[str]):
         _assert_file_exists(model_path)
         self.sp_model = sentencepiece.SentencePieceProcessor()
@@ -36,6 +39,7 @@ class Tokenizer:
         self.pad_id: int = self.sp_model.pad_id()
         self.boi_id: int = _BEGIN_IMAGE_TOKEN
         self.eoi_id: int = _END_IMAGE_TOKEN
+        self.audio_id: int = _AUDIO_TOKEN
         self.image_token_placeholder_id: int = self.sp_model.pad_id()
 
     def encode(self, s: str, bos: bool = True, eos: bool = False) -> List[int]:
