@@ -23,12 +23,14 @@ from .siglip_vision import config as siglip_vision_config
 
 
 # Keep a mapping from dtype strings to the supported torch dtypes.
-_STR_DTYPE_TO_TORCH_DTYPE = dict({
-    'float16': torch.float16,
-    'float': torch.float32,
-    'float32': torch.float32,
-    'bfloat16': torch.bfloat16,
-})
+_STR_DTYPE_TO_TORCH_DTYPE = dict(
+    {
+        "float16": torch.float16,
+        "float": torch.float32,
+        "float32": torch.float32,
+        "bfloat16": torch.bfloat16,
+    }
+)
 
 
 class AttentionType(enum.Enum):
@@ -40,6 +42,27 @@ class Architecture(enum.Enum):
     GEMMA_1 = 1
     GEMMA_2 = 2
     GEMMA_3 = 3
+    GEMMA_4 = 4
+
+
+@dataclasses.dataclass
+class AudioConfig:
+    hidden_size: int = 1024
+    num_hidden_layers: int = 12
+    num_attention_heads: int = 8
+    hidden_act: str = "silu"
+    subsampling_conv_channels: tuple[int, int] = (128, 32)
+    conv_kernel_size: int = 5
+    residual_weight: float = 0.5
+    attention_chunk_size: int = 12
+    attention_context_left: int = 13
+    attention_context_right: int = 0
+    attention_logit_cap: float = 50.0
+    attention_invalid_logits_value: float = 1e-09
+    use_clipped_linears: bool = True
+    gradient_clipping: float = 10000000000.0
+    output_proj_dims: int = 1536
+    rms_norm_eps: float = 1e-06
 
 
 @dataclasses.dataclass
@@ -65,13 +88,11 @@ class GemmaConfig:
     # The epsilon used by the rms normalization layers.
     rms_norm_eps: float = 1e-6
     # The dtype of the weights.
-    dtype: str = 'bfloat16'
+    dtype: str = "bfloat16"
     # Whether a quantized version of the model is used.
     quant: bool = False
     # The path to the model tokenizer.
-    tokenizer: Optional[str] = (
-    'tokenizer/tokenizer.model'
-    )
+    tokenizer: Optional[str] = "tokenizer/tokenizer.model"
     # The types of attention used in the layers of the model.
     attn_types: Optional[Sequence[AttentionType]] = None
     # The size of the sliding window used for local attention.
@@ -88,24 +109,41 @@ class GemmaConfig:
     # Whether to use post mlp normalization.
     use_post_ffw_norm: bool = False
     # The wave length of the rotary embedding.
-    rope_wave_length: dict[AttentionType, int] | None = None
+    rope_wave_length: Optional[dict[AttentionType, int]] = None
     # Whether to use QK normalization in the attention blocks.
     use_qk_norm: bool = False
     # Vision model config.
-    vision_config: siglip_vision_config.SiglipVisionModelConfig | None = None
+    vision_config: Optional[siglip_vision_config.SiglipVisionModelConfig] = None
     # The factor by which the rope wave length is divided for global layers.
-    rope_scaling_factor: int| None = None
+    rope_scaling_factor: Optional[int] = None
+
+    # Gemma 4 specific fields
+    moe_intermediate_size: Optional[int] = None
+    num_experts: Optional[int] = None
+    num_experts_per_tok: Optional[int] = None
+    num_shared_experts: Optional[int] = None
+    global_head_dim: Optional[int] = None
+    audio_config: Optional[AudioConfig] = None
+    mm_tokens_per_image: int = 256
+    audio_token_id: Optional[int] = None
+
+    # Custom Gemma 4 extra parameters
+    router_jitter_noise: float = 0.0
+    global_attn_layers: Optional[Sequence[int]] = None
+    partial_rotary_factor: float = 1.0
+    rope_theta: float = 10000.0
+    share_kv_projections: bool = False
 
     def get_dtype(self) -> Optional[torch.dtype]:
         """Gets the torch dtype from the config dtype string."""
         return _STR_DTYPE_TO_TORCH_DTYPE.get(self.dtype, None)
 
 
-def get_config_for_7b(dtype: str = 'bfloat16') -> GemmaConfig:
+def get_config_for_7b(dtype: str = "bfloat16") -> GemmaConfig:
     return GemmaConfig(dtype=dtype)
 
 
-def get_config_for_2b(dtype: str = 'bfloat16') -> GemmaConfig:
+def get_config_for_2b(dtype: str = "bfloat16") -> GemmaConfig:
     return GemmaConfig(
         dtype=dtype,
         num_hidden_layers=18,
@@ -116,7 +154,7 @@ def get_config_for_2b(dtype: str = 'bfloat16') -> GemmaConfig:
     )
 
 
-def get_config_for_2b_v2(dtype: str = 'bfloat16') -> GemmaConfig:
+def get_config_for_2b_v2(dtype: str = "bfloat16") -> GemmaConfig:
     return GemmaConfig(
         dtype=dtype,
         architecture=Architecture.GEMMA_2,
@@ -135,7 +173,7 @@ def get_config_for_2b_v2(dtype: str = 'bfloat16') -> GemmaConfig:
     )
 
 
-def get_config_for_9b(dtype: str = 'bfloat16') -> GemmaConfig:
+def get_config_for_9b(dtype: str = "bfloat16") -> GemmaConfig:
     return GemmaConfig(
         dtype=dtype,
         architecture=Architecture.GEMMA_2,
@@ -154,187 +192,187 @@ def get_config_for_9b(dtype: str = 'bfloat16') -> GemmaConfig:
     )
 
 
-def get_config_for_27b(dtype: str = 'bfloat16') -> GemmaConfig:
-  return GemmaConfig(
-      dtype=dtype,
-      architecture=Architecture.GEMMA_2,
-      num_hidden_layers=46,
-      num_attention_heads=32,
-      num_key_value_heads=16,
-      hidden_size=4608,
-      intermediate_size=36864,
-      use_pre_ffw_norm=True,
-      use_post_ffw_norm=True,
-      final_logit_softcapping=30.0,
-      attn_logit_softcapping=50.0,
-      head_dim=128,
-      attn_types=[AttentionType.LOCAL_SLIDING, AttentionType.GLOBAL] * 23,
-      sliding_window_size=4096,
-      query_pre_attn_scalar=144,  # hidden_size / num_attention_heads
-  )
+def get_config_for_27b(dtype: str = "bfloat16") -> GemmaConfig:
+    return GemmaConfig(
+        dtype=dtype,
+        architecture=Architecture.GEMMA_2,
+        num_hidden_layers=46,
+        num_attention_heads=32,
+        num_key_value_heads=16,
+        hidden_size=4608,
+        intermediate_size=36864,
+        use_pre_ffw_norm=True,
+        use_post_ffw_norm=True,
+        final_logit_softcapping=30.0,
+        attn_logit_softcapping=50.0,
+        head_dim=128,
+        attn_types=[AttentionType.LOCAL_SLIDING, AttentionType.GLOBAL] * 23,
+        sliding_window_size=4096,
+        query_pre_attn_scalar=144,  # hidden_size / num_attention_heads
+    )
 
 
 def get_config_for_1b(dtype: str) -> GemmaConfig:
-  return GemmaConfig(
-      dtype=dtype,
-      architecture=Architecture.GEMMA_3,
-      num_hidden_layers=26,
-      num_attention_heads=4,
-      num_key_value_heads=1,
-      hidden_size=1152,
-      intermediate_size=6912,
-      use_pre_ffw_norm=True,
-      use_post_ffw_norm=True,
-      head_dim=256,
-      attn_types=(
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.GLOBAL,
-      ),
-      sliding_window_size=512,
-      rope_wave_length={
-          AttentionType.LOCAL_SLIDING: 10_000,
-          AttentionType.GLOBAL: 1_000_000,
-      },
-      vocab_size=262_144,
-      max_position_embeddings=32_768,
-      tokenizer='tokenizer/gemma3_cleaned_262144_v2.spiece.model',
-      use_qk_norm=True,
-      vision_config=None,
-  )
+    return GemmaConfig(
+        dtype=dtype,
+        architecture=Architecture.GEMMA_3,
+        num_hidden_layers=26,
+        num_attention_heads=4,
+        num_key_value_heads=1,
+        hidden_size=1152,
+        intermediate_size=6912,
+        use_pre_ffw_norm=True,
+        use_post_ffw_norm=True,
+        head_dim=256,
+        attn_types=(
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.GLOBAL,
+        ),
+        sliding_window_size=512,
+        rope_wave_length={
+            AttentionType.LOCAL_SLIDING: 10_000,
+            AttentionType.GLOBAL: 1_000_000,
+        },
+        vocab_size=262_144,
+        max_position_embeddings=32_768,
+        tokenizer="tokenizer/gemma3_cleaned_262144_v2.spiece.model",
+        use_qk_norm=True,
+        vision_config=None,
+    )
 
 
 def get_config_for_4b(dtype: str) -> GemmaConfig:
-  return GemmaConfig(
-      dtype=dtype,
-      architecture=Architecture.GEMMA_3,
-      num_hidden_layers=34,
-      num_attention_heads=8,
-      num_key_value_heads=4,
-      hidden_size=2560,
-      intermediate_size=10240,
-      use_pre_ffw_norm=True,
-      use_post_ffw_norm=True,
-      head_dim=256,
-      attn_types=(
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.GLOBAL,
-      ),
-      sliding_window_size=1024,
-      rope_wave_length={
-          AttentionType.LOCAL_SLIDING: 10_000,
-          AttentionType.GLOBAL: 1_000_000,
-      },
-      vocab_size=262_144,
-      tokenizer='tokenizer/gemma3_cleaned_262144_v2.spiece.model',
-      use_qk_norm=True,
-      vision_config=siglip_vision_config.get_siglip_vision_model_config(),
-      rope_scaling_factor=8,
-  )
+    return GemmaConfig(
+        dtype=dtype,
+        architecture=Architecture.GEMMA_3,
+        num_hidden_layers=34,
+        num_attention_heads=8,
+        num_key_value_heads=4,
+        hidden_size=2560,
+        intermediate_size=10240,
+        use_pre_ffw_norm=True,
+        use_post_ffw_norm=True,
+        head_dim=256,
+        attn_types=(
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.GLOBAL,
+        ),
+        sliding_window_size=1024,
+        rope_wave_length={
+            AttentionType.LOCAL_SLIDING: 10_000,
+            AttentionType.GLOBAL: 1_000_000,
+        },
+        vocab_size=262_144,
+        tokenizer="tokenizer/gemma3_cleaned_262144_v2.spiece.model",
+        use_qk_norm=True,
+        vision_config=siglip_vision_config.get_siglip_vision_model_config(),
+        rope_scaling_factor=8,
+    )
 
 
 def get_config_for_12b(dtype: str) -> GemmaConfig:
-  return GemmaConfig(
-      dtype=dtype,
-      architecture=Architecture.GEMMA_3,
-      num_hidden_layers=48,
-      num_attention_heads=16,
-      num_key_value_heads=8,
-      hidden_size=3840,
-      intermediate_size=3840 * 8 // 2,
-      use_pre_ffw_norm=True,
-      use_post_ffw_norm=True,
-      head_dim=256,
-      attn_types=(
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.GLOBAL,
-      ),
-      sliding_window_size=1024,
-      rope_wave_length={
-          AttentionType.LOCAL_SLIDING: 10_000,
-          AttentionType.GLOBAL: 1_000_000,
-      },
-      vocab_size=262_144,
-      max_position_embeddings=131_072,
-      tokenizer='tokenizer/gemma3_cleaned_262144_v2.spiece.model',
-      use_qk_norm=True,
-      vision_config=siglip_vision_config.get_siglip_vision_model_config(),
-      rope_scaling_factor=8,
-  )
+    return GemmaConfig(
+        dtype=dtype,
+        architecture=Architecture.GEMMA_3,
+        num_hidden_layers=48,
+        num_attention_heads=16,
+        num_key_value_heads=8,
+        hidden_size=3840,
+        intermediate_size=3840 * 8 // 2,
+        use_pre_ffw_norm=True,
+        use_post_ffw_norm=True,
+        head_dim=256,
+        attn_types=(
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.GLOBAL,
+        ),
+        sliding_window_size=1024,
+        rope_wave_length={
+            AttentionType.LOCAL_SLIDING: 10_000,
+            AttentionType.GLOBAL: 1_000_000,
+        },
+        vocab_size=262_144,
+        max_position_embeddings=131_072,
+        tokenizer="tokenizer/gemma3_cleaned_262144_v2.spiece.model",
+        use_qk_norm=True,
+        vision_config=siglip_vision_config.get_siglip_vision_model_config(),
+        rope_scaling_factor=8,
+    )
 
 
 def get_config_for_27b_v3(dtype: str) -> GemmaConfig:
-  return GemmaConfig(
-      dtype=dtype,
-      architecture=Architecture.GEMMA_3,
-      num_hidden_layers=62,
-      num_attention_heads=32,
-      num_key_value_heads=16,
-      hidden_size=5376,
-      intermediate_size=5376 * 8 // 2,
-      use_pre_ffw_norm=True,
-      use_post_ffw_norm=True,
-      head_dim=128,
-      query_pre_attn_scalar=5376 // 32,
-      attn_types=(
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.LOCAL_SLIDING,
-          AttentionType.GLOBAL,
-      ),
-      sliding_window_size=1024,
-      rope_wave_length={
-          AttentionType.LOCAL_SLIDING: 10_000,
-          AttentionType.GLOBAL: 1_000_000,
-      },
-      vocab_size=262_144,
-      max_position_embeddings=131_072,
-      tokenizer='tokenizer/gemma3_cleaned_262144_v2.spiece.model',
-      use_qk_norm=True,
-      vision_config=siglip_vision_config.get_siglip_vision_model_config(),
-      rope_scaling_factor=8,
-  )
-
-
-def get_model_config(variant: str, dtype: str = 'bfloat16') -> GemmaConfig:
-  """Gets the GemmaConfig for the diresired variant and dtype."""
-  # Gemma1 variants
-  if variant == '7b':
-    return get_config_for_7b(dtype)
-  elif variant == '2b':
-    return get_config_for_2b(dtype)
-  # Gemma2 variants
-  elif variant == '2b-v2':
-    return get_config_for_2b_v2(dtype)
-  elif variant == '9b':
-    return get_config_for_9b(dtype)
-  elif variant == '27b':
-    return get_config_for_27b(dtype)
-  # Gemma3 variants
-  elif variant == '1b':
-    return get_config_for_1b(dtype)
-  elif variant == '4b':
-    return get_config_for_4b(dtype)
-  elif variant == '12b':
-    return get_config_for_12b(dtype)
-  elif variant == '27b_v3':
-    return get_config_for_27b_v3(dtype)
-  # Invalid variants
-  else:
-    raise ValueError(
-        f'Invalid variant {variant}. Supported variants are "1b", "2b", '
-        '"2b-v2", "4b",, "7b", "9b" "12b", "27b", and "27b_v3".'
+    return GemmaConfig(
+        dtype=dtype,
+        architecture=Architecture.GEMMA_3,
+        num_hidden_layers=62,
+        num_attention_heads=32,
+        num_key_value_heads=16,
+        hidden_size=5376,
+        intermediate_size=5376 * 8 // 2,
+        use_pre_ffw_norm=True,
+        use_post_ffw_norm=True,
+        head_dim=128,
+        query_pre_attn_scalar=5376 // 32,
+        attn_types=(
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.LOCAL_SLIDING,
+            AttentionType.GLOBAL,
+        ),
+        sliding_window_size=1024,
+        rope_wave_length={
+            AttentionType.LOCAL_SLIDING: 10_000,
+            AttentionType.GLOBAL: 1_000_000,
+        },
+        vocab_size=262_144,
+        max_position_embeddings=131_072,
+        tokenizer="tokenizer/gemma3_cleaned_262144_v2.spiece.model",
+        use_qk_norm=True,
+        vision_config=siglip_vision_config.get_siglip_vision_model_config(),
+        rope_scaling_factor=8,
     )
+
+
+def get_model_config(variant: str, dtype: str = "bfloat16") -> GemmaConfig:
+    """Gets the GemmaConfig for the diresired variant and dtype."""
+    # Gemma1 variants
+    if variant == "7b":
+        return get_config_for_7b(dtype)
+    elif variant == "2b":
+        return get_config_for_2b(dtype)
+    # Gemma2 variants
+    elif variant == "2b-v2":
+        return get_config_for_2b_v2(dtype)
+    elif variant == "9b":
+        return get_config_for_9b(dtype)
+    elif variant == "27b":
+        return get_config_for_27b(dtype)
+    # Gemma3 variants
+    elif variant == "1b":
+        return get_config_for_1b(dtype)
+    elif variant == "4b":
+        return get_config_for_4b(dtype)
+    elif variant == "12b":
+        return get_config_for_12b(dtype)
+    elif variant == "27b_v3":
+        return get_config_for_27b_v3(dtype)
+    # Invalid variants
+    else:
+        raise ValueError(
+            f'Invalid variant {variant}. Supported variants are "1b", "2b", '
+            '"2b-v2", "4b",, "7b", "9b" "12b", "27b", and "27b_v3".'
+        )
